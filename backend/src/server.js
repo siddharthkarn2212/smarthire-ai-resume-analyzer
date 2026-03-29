@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const resumeRoutes = require("./routes/resumeRoutes");
-const { connectDB } = require("./config/db");
+//const { connectDB } = require("./config/db");
 const app = express();
 
 app.use(cors());
@@ -24,11 +24,15 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-const startServer = async () => {
-  await connectDB();
-  app.listen(PORT, () => {
-    console.log(`SmartHire backend running on port ${PORT}`);
-  });
-};
+// const startServer = async () => {
+//   await connectDB();
+//   app.listen(PORT, () => {
+//     console.log(`SmartHire backend running on port ${PORT}`);
+//   });
+// };
 
-startServer();
+// startServer();
+
+app.listen(PORT, () => {
+  console.log(`SmartHire backend running on port ${PORT}`);
+});

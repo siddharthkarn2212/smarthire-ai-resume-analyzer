@@ -1,0 +1,178 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+  font-family: Inter, Segoe UI, Roboto, system-ui, sans-serif;
+}
+
+body {
+  background: #f8fafc;
+  color: #0f172a;
+  transition: background-color 220ms ease, color 220ms ease;
+}
+
+.animated-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.28), transparent 45%),
+    radial-gradient(circle at 80% 30%, rgba(168, 85, 247, 0.25), transparent 45%),
+    radial-gradient(circle at 50% 80%, rgba(14, 165, 233, 0.22), transparent 40%),
+    linear-gradient(145deg, #030513 0%, #090d20 55%, #120b2c 100%);
+  animation: bgShift 18s ease-in-out infinite alternate;
+  opacity: 1;
+  transition: opacity 220ms ease;
+}
+
+.light-only,
+html:not(.dark) .animated-bg {
+  opacity: 0;
+}
+
+.dark body {
+  background: #060816;
+  color: #e2e8f0;
+}
+
+.animated-bg::before,
+.animated-bg::after {
+  content: "";
+  position: absolute;
+  width: 40vw;
+  height: 40vw;
+  border-radius: 9999px;
+  filter: blur(70px);
+  opacity: 0.45;
+  animation: drift 12s ease-in-out infinite alternate;
+}
+
+.animated-bg::before {
+  top: -10%;
+  left: -10%;
+  background: rgba(59, 130, 246, 0.55);
+}
+
+.animated-bg::after {
+  right: -10%;
+  bottom: -10%;
+  background: rgba(217, 70, 239, 0.5);
+  animation-delay: 1.2s;
+}
+
+@keyframes drift {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  100% {
+    transform: translate(40px, -30px) scale(1.08);
+  }
+}
+
+@keyframes bgShift {
+  0% {
+    filter: saturate(1) brightness(1);
+    transform: scale(1);
+  }
+  100% {
+    filter: saturate(1.08) brightness(1.06);
+    transform: scale(1.015);
+  }
+}
+
+.premium-input {
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.65);
+  color: #0f172a;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.premium-input:focus {
+  outline: none;
+  border-color: rgba(56, 189, 248, 0.75);
+  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.22), 0 0 20px rgba(56, 189, 248, 0.25);
+}
+
+.dark .premium-input {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(15, 23, 42, 0.55);
+  color: #f1f5f9;
+}
+
+.dark .premium-input:focus {
+  outline: none;
+  border-color: rgba(56, 189, 248, 0.75);
+  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.22), 0 0 20px rgba(56, 189, 248, 0.25);
+}
+
+.premium-button {
+  position: relative;
+  overflow: hidden;
+  background-image: linear-gradient(135deg, #4f46e5 0%, #7c3aed 48%, #db2777 100%);
+  box-shadow: 0 10px 24px -12px rgba(99, 102, 241, 0.8);
+  transform: translate3d(var(--mx, 0), var(--my, 0), 0);
+  transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+}
+
+.premium-button:hover {
+  transform: translateY(-1px) scale(1.03);
+  filter: brightness(1.04);
+  box-shadow: 0 16px 30px -16px rgba(168, 85, 247, 0.85);
+}
+
+.premium-button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at var(--px, 50%) var(--py, 50%), rgba(255, 255, 255, 0.2), transparent 55%);
+  opacity: 0;
+  transition: opacity 160ms ease;
+  pointer-events: none;
+}
+
+.premium-button:hover::after {
+  opacity: 1;
+}
+
+.empty-state {
+  border: 1px dashed rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(16px);
+}
+
+.dark .empty-state {
+  border: 1px dashed rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-shimmer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 20%, rgba(255, 255, 255, 0.2) 50%, transparent 80%);
+  transform: translateX(-120%);
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(120%);
+  }
+}

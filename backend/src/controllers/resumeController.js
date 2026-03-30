@@ -7,15 +7,6 @@ const {
 
 const { suggestRolesFromSkills } = require("../utils/roleSkillMap");
 
-
-const Resume = require("../models/Resume");
-const Analysis = require("../models/Analysis");
-const RecruiterAnalysis = require("../models/RecruiterAnalysis");
-
-
-
-
-
 // ================= UPLOAD =================
 const uploadResume = async (req, res) => {
   try {
@@ -23,12 +14,22 @@ const uploadResume = async (req, res) => {
       return res.status(400).json({ message: "Resume file is required." });
     }
 
-
     let extractedText = "";
 
-
     try {
-        text = await extractTextFromFile(file.buffer);
+      const fs = require("fs");
+      const path = require("path");
+
+      const tempPath = path.join(
+        __dirname,
+        "../temp_" + Date.now() + ".pdf"
+      );
+
+      fs.writeFileSync(tempPath, req.file.buffer);
+
+      extractedText = await extractTextFromFile(tempPath);
+
+      fs.unlinkSync(tempPath);
     } catch (err) {
       console.error("Text extraction failed:", err.message);
       return res.status(400).json({
@@ -36,33 +37,16 @@ const uploadResume = async (req, res) => {
       });
     }
 
-
     const skills = extractSkills(extractedText);
     const suggestedRoles = suggestRolesFromSkills(skills);
 
-
-    const savedResume = await Resume.create({
-      filename: req.file.filename,
-      originalName: req.file.originalname,
-      extractedText,
-      skills,
-    });
-
-
-    
-
-
     return res.json({
-      resumeId: savedResume._id,
       extractedText,
       skills,
       suggestedRoles,
     });
-
-
   } catch (error) {
     console.error("UPLOAD ERROR:", error);
-
 
     return res.status(500).json({
       message: error.message || "Failed to upload resume.",
@@ -91,29 +75,9 @@ const analyzeResumeData = async (req, res) => {
     });
 
 
-    let targetResumeId = resumeId;
+   
 
 
-    if (!targetResumeId) {
-      const fallbackResume = await Resume.create({
-        filename: "manual-input.txt",
-        originalName: "manual-input.txt",
-        extractedText,
-        skills: analysis.extractedSkills || [],
-      });
-
-
-      targetResumeId = fallbackResume._id;
-    }
-
-
-    await Analysis.create({
-      resumeId: targetResumeId,
-      atsScore: analysis.atsScore,
-      matchScore: analysis.matchPercentage,
-      missingSkills: analysis.missingSkills,
-      suggestions: analysis.suggestions,
-    });
 
 
     return res.json(analysis);
@@ -136,13 +100,10 @@ const recruiterAnalyze = async (req, res) => {
     const files = req.files || [];
     const { role = "" } = req.body;
 
-
-    // ✅ FIX: ensure valid jobDescription always
     let jobDescription =
       req.body.jobDescription && req.body.jobDescription.trim()
         ? req.body.jobDescription
         : "No job description provided";
-
 
     if (!files.length) {
       return res.status(400).json({
@@ -150,93 +111,54 @@ const recruiterAnalyze = async (req, res) => {
       });
     }
 
-
     if (!role.trim()) {
       return res.status(400).json({
         message: "Job role is required.",
       });
     }
 
-
     const analyzedCandidates = [];
-    const candidateDocuments = [];
 
-for (const file of files) {
-  try {
-    let text = "";
+    for (const file of files) {
+      try {
+        let text = "";
 
-    try {
-      text = await extractTextFromFile(file.buffer);
-    } catch {
-      text = "";
+        try {
+          text = await extractTextFromFile(file.buffer);
+        } catch {
+          text = "";
+        }
+
+        const analysis = await analyzeResume({
+          text,
+          role,
+          jobDescription,
+        });
+
+        // ✅ NO DATABASE — just push result
+        analyzedCandidates.push({
+          fileName: file.originalname,
+          atsScore: analysis.atsScore,
+          matchPercentage: analysis.matchPercentage,
+          missingSkills: analysis.missingSkills || [],
+        });
+
+      } catch (err) {
+        console.error("File processing error:", err.message);
+      }
     }
-
-    const analysis = await analyzeResume({
-      text,
-      role,
-      jobDescription,
-    });
-
-    const savedResume = await Resume.create({
-      filename: file.filename,
-      originalName: file.originalname,
-      extractedText: text,
-      skills: analysis.extractedSkills || [],
-    });
-
-    await Analysis.create({
-      resumeId: savedResume._id,
-      atsScore: analysis.atsScore,
-      matchScore: analysis.matchPercentage,
-      missingSkills: analysis.missingSkills,
-      suggestions: analysis.suggestions,
-    });
-
-    candidateDocuments.push({
-      resumeId: savedResume._id,
-      score: analysis.atsScore,
-    });
-
-    analyzedCandidates.push({
-      resumeId: savedResume._id,
-      fileName: file.originalname,
-      atsScore: analysis.atsScore,
-      matchPercentage: analysis.matchPercentage,
-      missingSkills: analysis.missingSkills || [],
-    });
-
-  } catch (err) {
-    console.error("File processing error:", err.message);
-  }
-}
-
 
     const rankedCandidates = analyzedCandidates.sort(
       (a, b) => b.atsScore - a.atsScore
     );
-
-
-    await RecruiterAnalysis.create({
-      jobRole: role,
-      jobDescription,
-      candidates: candidateDocuments.sort((a, b) => b.score - a.score),
-      bestCandidate: rankedCandidates[0]?.resumeId,
-    });
-
 
     return res.json({
       bestCandidate: rankedCandidates[0] || null,
       rankedCandidates,
     });
 
-
   } catch (error) {
     console.error("RECRUITER ERROR:", error);
-    console.error("STACK:", error.stack);
-
-
-    
-
 
     return res.status(500).json({
       message: error.message || "Recruiter analysis failed.",

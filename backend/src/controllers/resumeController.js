@@ -19,10 +19,11 @@ const uploadResume = async (req, res) => {
     try {
       const fs = require("fs");
       const path = require("path");
+       const os = require("os"); // for render
 
-      const tempPath = path.join(
-        __dirname,
-        "../temp_" + Date.now() + ".pdf"
+            const tempPath = path.join(
+        os.tmpdir(),   // ✅ CHANGE HERE
+        "resume_" + Date.now() + ".pdf"
       );
 
       fs.writeFileSync(tempPath, req.file.buffer);

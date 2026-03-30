@@ -1,6 +1,3 @@
-const fs = require("fs");
-
-
 const {
   extractTextFromFile,
   extractSkills,
@@ -16,16 +13,7 @@ const Analysis = require("../models/Analysis");
 const RecruiterAnalysis = require("../models/RecruiterAnalysis");
 
 
-// ================= CLEANUP =================
-const cleanupFile = (filePath) => {
-  try {
-    if (filePath && fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
-  } catch (err) {
-    console.error("File cleanup error:", err.message);
-  }
-};
+
 
 
 // ================= UPLOAD =================
@@ -40,10 +28,9 @@ const uploadResume = async (req, res) => {
 
 
     try {
-      extractedText = await extractTextFromFile(req.file.path);
+        text = await extractTextFromFile(file.buffer);
     } catch (err) {
       console.error("Text extraction failed:", err.message);
-      cleanupFile(req.file.path);
       return res.status(400).json({
         message: "Failed to read resume file.",
       });
@@ -62,7 +49,7 @@ const uploadResume = async (req, res) => {
     });
 
 
-    cleanupFile(req.file.path);
+    
 
 
     return res.json({
@@ -75,9 +62,6 @@ const uploadResume = async (req, res) => {
 
   } catch (error) {
     console.error("UPLOAD ERROR:", error);
-
-
-    if (req.file) cleanupFile(req.file.path);
 
 
     return res.status(500).json({
@@ -177,64 +161,54 @@ const recruiterAnalyze = async (req, res) => {
     const analyzedCandidates = [];
     const candidateDocuments = [];
 
+for (const file of files) {
+  try {
+    let text = "";
 
-    for (const file of files) {
-      try {
-        let text = "";
-
-
-        try {
-          text = await extractTextFromFile(file.path);
-        } catch {
-          text = "";
-        }
-
-
-        const analysis = await analyzeResume({
-          text,
-          role,
-          jobDescription,
-        });
-
-
-        const savedResume = await Resume.create({
-          filename: file.filename,
-          originalName: file.originalname,
-          extractedText: text,
-          skills: analysis.extractedSkills || [],
-        });
-
-
-        await Analysis.create({
-          resumeId: savedResume._id,
-          atsScore: analysis.atsScore,
-          matchScore: analysis.matchPercentage,
-          missingSkills: analysis.missingSkills,
-          suggestions: analysis.suggestions,
-        });
-
-
-        candidateDocuments.push({
-          resumeId: savedResume._id,
-          score: analysis.atsScore,
-        });
-
-
-        analyzedCandidates.push({
-          resumeId: savedResume._id,
-          fileName: file.originalname,
-          atsScore: analysis.atsScore,
-          matchPercentage: analysis.matchPercentage,
-          missingSkills: analysis.missingSkills || [],
-        });
-
-
-      } catch (err) {
-        console.error("File processing error:", err.message);
-      } finally {
-        cleanupFile(file.path);
-      }
+    try {
+      text = await extractTextFromFile(file.buffer);
+    } catch {
+      text = "";
     }
+
+    const analysis = await analyzeResume({
+      text,
+      role,
+      jobDescription,
+    });
+
+    const savedResume = await Resume.create({
+      filename: file.filename,
+      originalName: file.originalname,
+      extractedText: text,
+      skills: analysis.extractedSkills || [],
+    });
+
+    await Analysis.create({
+      resumeId: savedResume._id,
+      atsScore: analysis.atsScore,
+      matchScore: analysis.matchPercentage,
+      missingSkills: analysis.missingSkills,
+      suggestions: analysis.suggestions,
+    });
+
+    candidateDocuments.push({
+      resumeId: savedResume._id,
+      score: analysis.atsScore,
+    });
+
+    analyzedCandidates.push({
+      resumeId: savedResume._id,
+      fileName: file.originalname,
+      atsScore: analysis.atsScore,
+      matchPercentage: analysis.matchPercentage,
+      missingSkills: analysis.missingSkills || [],
+    });
+
+  } catch (err) {
+    console.error("File processing error:", err.message);
+  }
+}
 
 
     const rankedCandidates = analyzedCandidates.sort(
@@ -261,7 +235,7 @@ const recruiterAnalyze = async (req, res) => {
     console.error("STACK:", error.stack);
 
 
-    (req.files || []).forEach((file) => cleanupFile(file.path));
+    
 
 
     return res.status(500).json({
